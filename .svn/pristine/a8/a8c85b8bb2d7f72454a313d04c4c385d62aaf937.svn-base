@@ -1,0 +1,19 @@
+<script setup>
+import { ref } from 'vue';
+import store from '@/store';
+import AceHighlight from '@/components/Blockly/AceHighlight/index.vue';
+</script>
+
+<template>
+  <div class="teach-container">
+    <AceHighlight
+        v-model="store.pyCode"
+        :highlight-text="store.selectedBlockCode"
+        :highlight-snippet="store.selectedBlockSnippet"
+        :highlight-line="store.selectedBlockLine"
+        :highlight-end-line="store.selectedBlockEndLine"
+    />
+  </div>
+</template>
+
+<style src="./index.css" scoped></style>

@@ -1,0 +1,7 @@
+.markdown-preview {
+  width: 100%;
+  color: #000;
+}
+.markdown-preview img {
+  max-width: 100%;
+}

@@ -1,0 +1,664 @@
+<script setup>
+import { ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue';
+
+// ==== 1. 常量与参数 ====
+const rows = 3;
+const cols = 3;
+const startPos = { r: rows - 1, c: 0 };
+const goalPos = { r: 0, c: cols - 1 };
+const maxStepsPerEpisode = 200;
+
+// 响应式参数
+const params = reactive({
+  alpha: 0.5,
+  gamma: 0.9,
+  epsilon: 0.1,
+  speed: 50
+});
+
+// 状态追踪
+const episodeCount = ref(0);
+const currentStep = ref(0);
+const isTraining = ref(false);
+const canvasRef = ref(null);
+const showSidebar = ref(true); // 控制右侧边栏显示
+let trainTimer = null;
+
+// Q 表 (使用一维数组模拟，每个状态4个动作)
+let Q = new Float32Array(rows * cols * 4);
+
+// 陷阱数据
+const traps = ref([{ r: 2, c: 2 }, { r: 3, c: 4 }]); // 初始默认
+
+// R 表数据 (用于 v-model 绑定)
+const rTableValues = reactive(new Array(rows * cols).fill(-0.01));
+
+// 动作定义: 上, 右, 下, 左
+const ACTIONS = [{ dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }];
+
+// ==== 2. 辅助函数 ====
+const stateIndex = (r, c) => r * cols + c;
+const qIndex = (s, a) => s * 4 + a;
+
+const isTrap = (r, c) => traps.value.some(t => t.r === r && t.c === c);
+const isGoal = (r, c) => r === goalPos.r && c === goalPos.c;
+const isStart = (r, c) => r === startPos.r && c === startPos.c;
+
+const isTerminal = (r, c) => isGoal(r, c) || isTrap(r, c);
+
+// 判断格子属性 (用于 UI 绑定)
+const getCellType = (index) => {
+  const r = Math.floor(index / cols);
+  const c = index % cols;
+  if (isGoal(r, c)) return 'goal';
+  if (isTrap(r, c)) return 'trap';
+  if (isStart(r, c)) return 'start';
+  return 'normal';
+};
+
+// 奖励函数
+const getReward = (r, c) => rTableValues[stateIndex(r, c)];
+
+// ==== 3. 核心算法逻辑 ====
+
+const resetQ = () => {
+  Q = new Float32Array(rows * cols * 4);
+  episodeCount.value = 0;
+  currentStep.value = 0;
+  render();
+};
+
+const resetRValuesToDefault = () => {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      let idx = stateIndex(r, c);
+      let val = -0.01;
+      if (isGoal(r, c)) val = 1.0;
+      else if (isTrap(r, c)) val = -1.0;
+      rTableValues[idx] = val;
+    }
+  }
+};
+
+const sampleAction = (s) => {
+  if (Math.random() < params.epsilon) return Math.floor(Math.random() * 4);
+  let base = s * 4;
+  let bestA = 0;
+  let bestV = Q[base + 0];
+  for (let a = 1; a < 4; a++) {
+    let v = Q[base + a];
+    if (v > bestV) { bestV = v; bestA = a; }
+  }
+  return bestA;
+};
+
+const maxQofState = (s) => {
+  let base = s * 4;
+  let m = Q[base];
+  for (let a = 1; a < 4; a++) {
+    if (Q[base + a] > m) m = Q[base + a];
+  }
+  return m;
+};
+
+const stepEnvironment = (r, c, action) => {
+  const move = ACTIONS[action];
+  let nr = r + move.dr;
+  let nc = c + move.dc;
+  if (nr < 0) nr = 0; if (nr >= rows) nr = rows - 1;
+  if (nc < 0) nc = 0; if (nc >= cols) nc = cols - 1;
+  return { r: nr, c: nc };
+};
+
+const runOneEpisode = async () => {
+  let r = startPos.r;
+  let c = startPos.c;
+
+  for (let step = 0; step < maxStepsPerEpisode; step++) {
+    currentStep.value = step + 1;
+    let s = stateIndex(r, c);
+
+    let a = sampleAction(s);
+    let next = stepEnvironment(r, c, a);
+    let nr = next.r; let nc = next.c;
+    let ns = stateIndex(nr, nc);
+
+    let rew = getReward(nr, nc);
+    let nextIsTerm = isTerminal(nr, nc);
+
+    let idx = qIndex(s, a);
+    let tdTarget = rew + params.gamma * (nextIsTerm ? 0 : maxQofState(ns));
+    Q[idx] = Q[idx] + params.alpha * (tdTarget - Q[idx]);
+
+    r = nr; c = nc;
+    if (nextIsTerm) break;
+  }
+  episodeCount.value++;
+};
+
+// ==== 4. 控制逻辑 ====
+
+const startTraining = () => {
+  if (isTraining.value) return;
+  isTraining.value = true;
+  if(trainTimer) clearInterval(trainTimer);
+  trainTimer = setInterval(async () => {
+    await runOneEpisode();
+    render();
+  }, Math.max(1, 205 - params.speed));
+};
+
+const pauseTraining = () => {
+  isTraining.value = false;
+  if (trainTimer) { clearInterval(trainTimer); trainTimer = null; }
+};
+
+const stepOnce = async () => {
+  await runOneEpisode();
+  render();
+};
+
+const randomizeTraps = () => {
+  traps.value = [];
+  const count = 1;
+  while (traps.value.length < count) {
+    let rr = Math.floor(Math.random() * rows);
+    let cc = Math.floor(Math.random() * cols);
+    if ((rr === startPos.r && cc === startPos.c) || (rr === goalPos.r && cc === goalPos.c)) continue;
+    if (!traps.value.find(t => t.r === rr && t.c === cc)) traps.value.push({ r: rr, c: cc });
+  }
+  resetRValuesToDefault();
+  resetQ();
+  render();
+};
+
+const handleRValueChange = (index, event) => {
+  let val = parseFloat(event.target.value);
+  if(isNaN(val)) val = -0.01;
+  rTableValues[index] = val;
+  render();
+};
+
+const toggleSidebar = () => {
+  showSidebar.value = !showSidebar.value;
+};
+
+// ==== 5. Canvas 渲染逻辑 ====
+
+const render = () => {
+  if (!canvasRef.value) return;
+  const ctx = canvasRef.value.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvasRef.value.getBoundingClientRect();
+  canvasRef.value.width = rect.width * dpr;
+  canvasRef.value.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+  const cellW = W / cols;
+  const cellH = H / rows;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8f9fa';
+  ctx.fillRect(0, 0, W, H);
+
+  let maxQ = -Infinity, minQ = Infinity;
+  for (let s = 0; s < rows * cols; s++) {
+    for (let a = 0; a < 4; a++) {
+      let v = Q[qIndex(s, a)];
+      if (v > maxQ) maxQ = v;
+      if (v < minQ) minQ = v;
+    }
+  }
+  if (!isFinite(maxQ)) { maxQ = 1; minQ = -1; }
+  if (maxQ === minQ) { maxQ = minQ + 1; }
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = c * cellW; const y = r * cellH;
+      let s = stateIndex(r, c);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + 4, y + 4, cellW - 8, cellH - 8);
+      ctx.strokeStyle = '#e9ecef';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 4, y + 4, cellW - 8, cellH - 8);
+
+      if (isStart(r, c)) ctx.fillStyle = '#d0cdff';
+      if (isGoal(r, c)) ctx.fillStyle = '#d4edda';
+      if (isTrap(r, c)) ctx.fillStyle = '#f8d7da';
+      if (isTerminal(r, c) || isStart(r,c)) {
+        ctx.fillRect(x + 4, y + 4, cellW - 8, cellH - 8);
+        ctx.strokeStyle = isStart(r,c)?'#6200ea':(isGoal(r,c)?'#28a745':'#dc3545');
+        ctx.strokeRect(x + 4, y + 4, cellW - 8, cellH - 8);
+      }
+
+      const cx = x + cellW / 2;
+      const cy = y + cellH / 2;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+      if (!isTerminal(r, c)) {
+        let base = s * 4; let bestA = 0; let bestV = Q[base + 0];
+        for (let a = 1; a < 4; a++) { if (Q[base + a] > bestV) { bestV = Q[base + a]; bestA = a; } }
+
+        drawArrow(ctx, cx, cy - 10, bestA, '#343a40');
+
+        ctx.font = 'bold 14px Inter, sans-serif';
+        ctx.fillStyle = '#343a40';
+        ctx.fillText(bestV.toFixed(2), cx, cy + 20);
+
+        if (isStart(r, c)) {
+          ctx.font = '12px Inter, sans-serif';
+          ctx.fillStyle = '#6200ea';
+          ctx.fillText('起点', cx, cy + 40);
+        }
+      } else {
+        ctx.font = 'bold 16px Inter, sans-serif';
+        ctx.fillStyle = isGoal(r,c) ? '#28a745' : '#dc3545';
+        let label = isGoal(r,c) ? "终点" : "陷阱";
+        ctx.fillText(label, cx, cy);
+      }
+    }
+  }
+};
+
+const drawArrow = (ctx, cx, cy, action, color) => {
+  ctx.save();
+  ctx.translate(cx, cy);
+  let angle = [ -Math.PI/2, 0, Math.PI/2, Math.PI ][action];
+  ctx.rotate(angle);
+  ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0);
+  ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(2, -6); ctx.lineTo(2, 6); ctx.closePath();
+  ctx.fillStyle = color; ctx.fill();
+  ctx.restore();
+};
+
+// ==== 6. 生命周期 ====
+onMounted(() => {
+  randomizeTraps();
+  watch(params, () => {
+    if(isTraining.value) {
+      pauseTraining();
+      startTraining();
+    }
+  }, { deep: true });
+  window.addEventListener('resize', render);
+});
+
+onBeforeUnmount(() => {
+  pauseTraining();
+  window.removeEventListener('resize', render);
+});
+</script>
+
+<template>
+  <div class="q-learning-page">
+    <header class="top-bar">
+      <div class="bar-left">训练模型玩游戏</div>
+      <div class="bar-right">
+        <div class="user-avatar">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+            <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <button class="tool-toggle-btn" @click="toggleSidebar">
+          <span class="inner-line"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="main-body">
+      <div class="content-area">
+        <div class="panel-row">
+          <div class="card control-card">
+            <div class="params-section">
+              <div class="control-item">
+                <div class="row-label"><label>学习率 α</label><span class="val">{{ params.alpha.toFixed(2) }}</span></div>
+                <input type="range" v-model.number="params.alpha" min="0" max="1" step="0.01" class="purple-slider" />
+                <p class="tips">决定了新信息覆盖旧信息的程度</p>
+              </div>
+              <div class="control-item">
+                <div class="row-label"><label>折扣因子 γ</label><span class="val">{{ params.gamma.toFixed(2) }}</span></div>
+                <input type="range" v-model.number="params.gamma" min="0" max="0.999" step="0.01" class="purple-slider" />
+                <p class="tips">决定了对未来奖励的重视程度</p>
+              </div>
+              <div class="control-item">
+                <div class="row-label"><label>探索率 ε</label><span class="val">{{ params.epsilon.toFixed(2) }}</span></div>
+                <input type="range" v-model.number="params.epsilon" min="0" max="1" step="0.01" class="purple-slider" />
+                <p class="tips">决定了随机探索的可能性</p>
+              </div>
+              <div class="control-item">
+                <div class="row-label"><label>速度 (ms)</label><span class="val">{{ params.speed }}</span></div>
+                <input type="range" v-model.number="params.speed" min="5" max="200" step="5" class="purple-slider" />
+                <p class="tips">训练播放速度</p>
+              </div>
+            </div>
+
+            <div class="r-table-section">
+              <div class="section-header">
+                <h3>R表</h3>
+                <button @click="randomizeTraps" class="small-purple-btn">随机障碍</button>
+              </div>
+              <div class="r-table-grid">
+                <div
+                    v-for="(val, index) in rTableValues"
+                    :key="index"
+                    class="r-cell"
+                    :class="getCellType(index)"
+                >
+                  <input
+                      type="number"
+                      :value="val"
+                      @input="handleRValueChange(index, $event)"
+                      :readonly="getCellType(index) !== 'normal'"
+                      step="0.1"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card q-table-card">
+            <div class="card-header">
+              <h3>Q表</h3>
+              <div class="header-right">
+                <div class="meta">回合: <span>{{ episodeCount }}</span> · 步数: <span>{{ currentStep }}</span></div>
+                <button @click="resetQ" class="small-purple-btn">重置 Q 表</button>
+              </div>
+            </div>
+            <div class="canvas-wrapper">
+              <canvas ref="canvasRef"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-actions">
+          <button @click="startTraining" :disabled="isTraining" class="action-btn start-btn">开始训练</button>
+          <button @click="pauseTraining" :disabled="!isTraining" class="action-btn pause-btn">暂停</button>
+          <button @click="stepOnce" class="action-btn step-btn">训练一步</button>
+        </div>
+      </div>
+
+      <aside class="right-sidebar" :class="{ open: showSidebar }">
+        <div class="sidebar-header">
+          <h3>工具介绍</h3>
+          <button class="close-btn tool-toggle-btn" @click="toggleSidebar">
+            <span class="inner-line"></span>
+          </button>
+        </div>
+        <div class="sidebar-content">
+          <h4>Q-learning</h4>
+          <p>Q-learning 是一种无模型 (Model-Free) 的强化学习算法。</p>
+
+          <h4>规则更新：</h4>
+          <p>在Q表区域，起点、终点和陷阱的奖励是固定的（不可编辑）。左上为 (0,0)，显示的数值为该状态最大 Q 值。</p>
+          <div class="legend">
+            <div class="legend-item"><span class="dot start"></span>起点</div>
+            <div class="legend-item"><span class="dot goal"></span>目标</div>
+            <div class="legend-item"><span class="dot trap"></span>陷阱</div>
+          </div>
+          <p>在R表区域，仅白色文字区域可修改。你可以修改普通空白格子的奖励值（例如设为 -1 制造人工障碍），小于-1的值会被认为是陷阱、大于等于1的值被认为是终点。</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* 全局变量定义 (亮色主题) */
+.q-learning-page {
+  --bg-color: #f5f5f5; /* 整体背景 */
+  --card-bg: #ffffff;  /* 卡片背景 */
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent-purple: #6200ea; /* 强调色 (紫色) */
+  --accent-light-purple: #d0cdff;
+  --success-green: #28a745;
+  --danger-red: #dc3545;
+  --border-color: #e9ecef;
+
+  width: 2048px;
+  height: 1200px;
+  background: var(--bg-color);
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 固定尺寸，隐藏溢出 */
+}
+
+/* ==== 顶部标题栏 ==== */
+.top-bar {
+  width: 2048px;
+  height: 60px;
+  background: #ffffff;
+  box-shadow: 0px 0px 1px 0px rgba(0,0,0,0.20);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.bar-left {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.user-avatar {
+  width: 32px; height: 32px;
+  color: var(--accent-purple);
+}
+
+/* 右上角工具栏图标样式 */
+.tool-toggle-btn {
+  width: 24px;
+  height: 18px;
+  background: #ffffff;
+  border: 2px solid #333333;
+  border-radius: 2px;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  position: relative;
+}
+
+/* 图标内部竖线 */
+.tool-toggle-btn .inner-line {
+  position: absolute;
+  top: 0;
+  right: 6px; /* 调整竖线位置 */
+  width: 2px;
+  height: 100%;
+  background: #333333;
+}
+
+/* ==== 主体布局 ==== */
+.main-body {
+  flex: 1;
+  display: flex;
+  position: relative;
+  padding: 24px;
+  gap: 24px;
+  overflow: hidden;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0; /* 防止 flex 子元素溢出 */
+}
+
+.panel-row {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+}
+
+/* 卡片通用样式 */
+.card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==== 左侧控制与R表卡片 ==== */
+.control-card {
+  width: 320px;
+  flex-shrink: 0;
+  gap: 30px;
+}
+
+.params-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.control-item {
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.row-label {
+  display: flex; justify-content: space-between; font-size: 14px;
+}
+.row-label .val { font-weight: 600; color: var(--accent-purple); }
+.tips { font-size: 12px; color: var(--text-secondary); margin: 0; }
+
+/* 紫色滑块样式自定义 */
+.purple-slider {
+  -webkit-appearance: none;
+  width: 100%; height: 6px; border-radius: 3px; background: #d0cdff; outline: none;
+}
+.purple-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px; border-radius: 50%; background: var(--accent-purple); cursor: pointer;
+  box-shadow: 0 2px 6px rgba(98, 0, 234, 0.3);
+}
+
+/* R-Table 部分 */
+.r-table-section { display: flex; flex-direction: column; gap: 16px; }
+.section-header { display: flex; justify-content: space-between; align-items: center; }
+.section-header h3 { margin: 0; font-size: 16px; }
+
+.small-purple-btn {
+  padding: 6px 12px;
+  background: var(--accent-purple);
+  color: white;
+  border: none; border-radius: 6px;
+  font-size: 12px; cursor: pointer;
+  transition: opacity 0.2s;
+}
+.small-purple-btn:hover { opacity: 0.9; }
+
+.r-table-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+.r-cell {
+  aspect-ratio: 1;
+  background: #f8f9fa;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+.r-cell input {
+  width: 80%; background: transparent; border: none; text-align: center;
+  font-size: 16px; font-weight: 600; color: var(--text-primary); outline: none;
+}
+/* R-Table 特殊状态 */
+.r-cell.goal { background: var(--success-green); }
+.r-cell.goal input { color: white; }
+.r-cell.trap { background: var(--danger-red); }
+.r-cell.trap input { color: white; }
+.r-cell.start { background: var(--accent-purple); }
+.r-cell.start input { color: white; }
+.r-cell.normal:hover { border-color: var(--accent-purple); background: #fff; }
+
+/* ==== 中间 Q表卡片 ==== */
+.q-table-card {
+  flex: 1;
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+}
+.card-header h3 { margin: 0; font-size: 18px; }
+.header-right { display: flex; align-items: center; gap: 20px; }
+.meta { font-size: 14px; color: var(--text-secondary); }
+.meta span { font-weight: 600; color: var(--text-primary); }
+
+.canvas-wrapper {
+  flex: 1;
+  width: 100%;
+  height: 0; /* 让 flex item 撑开高度 */
+  min-height: 400px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+canvas { width: 100%; height: 100%; display: block; }
+
+/* ==== 底部按钮组 ==== */
+.bottom-actions {
+  display: flex; gap: 20px; justify-content: center;
+  padding-bottom: 20px;
+}
+.action-btn {
+  padding: 12px 40px;
+  border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; border: none;
+  transition: all 0.2s;
+}
+.start-btn, .step-btn { background: var(--accent-purple); color: white; }
+.start-btn:hover:not(:disabled), .step-btn:hover { opacity: 0.9; box-shadow: 0 4px 12px rgba(98, 0, 234, 0.3); }
+.start-btn:disabled { background: #a5a0f0; cursor: not-allowed; }
+.pause-btn { background: #d0cdff; color: var(--accent-purple); }
+.pause-btn:hover:not(:disabled) { background: #c0bdf0; }
+.pause-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+
+/* ==== 右侧侧边栏 ==== */
+.right-sidebar {
+  width: 300px;
+  background: var(--card-bg);
+  border-left: 1px solid var(--border-color);
+  display: flex; flex-direction: column;
+  transition: margin-right 0.3s ease;
+  margin-right: -324px; /* 隐藏状态 (宽度+padding) */
+  flex-shrink: 0;
+}
+.right-sidebar.open { margin-right: 0; }
+
+.sidebar-header {
+  height: 60px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; border-bottom: 1px solid var(--border-color);
+}
+.sidebar-header h3 { margin: 0; font-size: 16px; }
+.close-btn { transform: rotate(180deg); } /* 关闭时图标反转一下 */
+
+.sidebar-content {
+  padding: 24px; overflow-y: auto; color: var(--text-secondary); font-size: 14px; line-height: 1.6;
+}
+.sidebar-content h4 { color: var(--text-primary); margin: 20px 0 10px 0; font-size: 15px; }
+.sidebar-content p { margin-bottom: 16px; }
+
+.legend { display: flex; gap: 16px; margin-bottom: 16px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.dot { width: 10px; height: 10px; border-radius: 2px; }
+.dot.start { background: var(--accent-purple); }
+.dot.goal { background: var(--success-green); }
+.dot.trap { background: var(--danger-red); }
+</style>

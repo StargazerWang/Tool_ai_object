@@ -1,0 +1,339 @@
+/* =========================================
+   1. 页面基础样式
+   ========================================= */
+.h5-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: 'Segoe UI', "Microsoft YaHei", sans-serif;
+    padding-bottom: 10px;
+}
+
+/* =========================================
+   控制面板
+   ========================================= */
+.control-panel {
+    background: white;
+    padding: 20px 15px;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    width: 100%;
+    text-align: center;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+    z-index: 2;
+    position: relative;
+}
+
+/* =========================================
+   双箭头连接区域 (Step 1&3 连接到底部)
+   ========================================= */
+.connector-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    gap: 10px;
+    margin-top: -15px;
+    margin-bottom: -15px;
+    z-index: 1;
+    position: relative;
+    padding: 0 15px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.connector-item {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding-top: 10px;
+}
+
+.big-down-arrow {
+    font-size: 40px;
+    color: #e4e7ed;
+    animation: bounceArrow 2s infinite;
+}
+
+@keyframes bounceArrow {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+.connector-spacer {
+    flex: 1; /* 对应中间卡片 Step 2 的位置，占位不显示箭头 */
+}
+
+/* =========================================
+   显示区域 (Step 4)
+   ========================================= */
+.display-area {
+    position: relative;
+    width: 100%;
+    min-height: 450px;
+    background: #000;
+    border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border: 2px solid #333;
+    margin-top: 0;
+}
+
+/* Step 4 的标题文字 */
+.display-title-overlay {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 5;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* =========================================
+   状态提示条
+   ========================================= */
+.status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 20px;
+    border-radius: 50px;
+    margin-bottom: 25px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.status-bar.loading {
+    background: linear-gradient(to right, #fdf6ec, #faecd8);
+    border: 1px solid #f3d19e;
+    color: #b88230;
+}
+
+.status-bar.success {
+    background: linear-gradient(135deg, #f0f9eb 0%, #e4f7da 100%);
+    border: 1px solid #c2e7b0;
+    color: #2b4e28;
+    box-shadow: 0 4px 12px rgba(103, 194, 58, 0.15);
+}
+
+.status-icon { margin-right: 10px; font-size: 18px; }
+.status-bar.success .status-icon { color: #67c23a; text-shadow: 0 0 5px rgba(103, 194, 58, 0.4); }
+.status-bar strong { font-weight: 800; margin: 0 4px; font-family: Consolas, Monaco, monospace; }
+
+/* =========================================
+   工作流程布局 (三栏 + 箭头)
+   ========================================= */
+.workflow-layout {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 10px;
+    flex-wrap: nowrap;
+    position: relative;
+}
+
+/* 横向箭头 (Step 1->2, 2->3) */
+.flow-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #409eff 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #409eff;
+    flex-shrink: 0;
+    width: 40px;
+    margin: 0 5px;
+    filter: drop-shadow(0 2px 4px rgba(64, 158, 255, 0.3));
+    animation: flowBreathe 1.8s ease-in-out infinite;
+    z-index: 1;
+}
+
+@keyframes flowBreathe {
+    0% { transform: translateX(0) scale(1); opacity: 0.6; }
+    50% { transform: translateX(6px) scale(1.15); opacity: 1; }
+    100% { transform: translateX(0) scale(1); opacity: 0.6; }
+}
+
+/* 卡片通用样式 */
+.card {
+    flex: 1;
+    min-width: 0;
+    background: #fff;
+    border: 1px solid #e4e7ed;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.step-badge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #f2f6fc;
+    color: #909399;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-bottom-right-radius: 10px;
+    font-weight: 800;
+    z-index: 5;
+    font-family: Consolas, Monaco, sans-serif;
+}
+
+.card.active .step-badge {
+    background: #e1f3d8;
+    color: #67c23a;
+}
+
+.step-badge.output-badge {
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+    font-size: 13px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border-bottom-right-radius: 12px;
+    padding: 6px 14px;
+}
+
+.card.disabled {
+    opacity: 0.6;
+    background: #f9fafc;
+    border-color: #ebeef5;
+    pointer-events: none;
+    filter: grayscale(100%);
+}
+
+.card:hover:not(.disabled) {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+    border-color: #dcdfe6;
+}
+
+.card h3 {
+    margin: 15px 0 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #303133;
+    text-align: center;
+}
+
+.card-desc {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: #909399;
+    text-align: center;
+    line-height: 1.4;
+    height: 34px;
+}
+
+.action-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    justify-content: center;
+}
+
+.stat-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.stat-label { font-size: 11px; opacity: 0.9; }
+.stat-number { font-size: 16px; font-weight: 800; font-family: 'Arial', sans-serif; }
+
+.fancy-input-group {
+    display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;
+}
+.fancy-input-label { font-size: 12px; color: #606266; font-weight: 700; margin-left: 2px; }
+.fancy-input {
+    width: 100%; box-sizing: border-box; padding: 8px;
+    border-radius: 6px; border: 1px solid #dcdfe6; font-size: 13px; outline: none; transition: 0.2s;
+}
+.fancy-input:focus { border-color: #409eff; box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2); }
+
+.btn {
+    width: 100%; padding: 9px 0; border: none; border-radius: 6px; cursor: pointer; color: white;
+    font-weight: 600; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.btn:active { transform: scale(0.96); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; background: #c8c9cc; box-shadow: none; }
+.primary { background: linear-gradient(135deg, #409eff, #3a8ee6); }
+.primary:hover { background: linear-gradient(135deg, #66b1ff, #409eff); }
+.warning { background: linear-gradient(135deg, #e6a23c, #d6922c); }
+.danger { background: linear-gradient(135deg, #f56c6c, #e64242); }
+.success { background: linear-gradient(135deg, #67c23a, #529b2e); }
+
+.preview-media { max-width: 100%; max-height: 500px; display: block; }
+.canvas-wrapper { position: relative; display: inline-block; line-height: 0; }
+.overlay-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.loading-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.8); color: white;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
+}
+.spinner {
+    width: 40px; height: 40px; border: 4px solid #fff; border-top-color: transparent;
+    border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* =========================================
+   移动端适配
+   ========================================= */
+@media (max-width: 900px) {
+    .workflow-layout { flex-direction: column; }
+    .flow-arrow {
+        margin: 5px 0;
+        animation: flowBreatheVertical 1.8s ease-in-out infinite;
+    }
+    .connector-wrapper { display: none; }
+    .display-area { margin-top: 20px; }
+}
+
+@keyframes flowBreatheVertical {
+    0% { transform: rotate(90deg) translateX(0) scale(1); opacity: 0.6; }
+    50% { transform: rotate(90deg) translateX(6px) scale(1.15); opacity: 1; }
+    100% { transform: rotate(90deg) translateX(0) scale(1); opacity: 0.6; }
+}
+
+.page-wrapper { width: 100vw; height: 100vh; display: flex; position: relative; overflow: hidden; background-color: #f6f8fa; }
+.content-area { flex: 1; overflow-y: auto; padding: 10px 20px; min-width: 0; }
+.introduce-wrapper { display: flex; flex-direction: column; flex-shrink: 0; overflow: visible; position: relative; min-width: 0; border-left: 1px solid #ddd; }
+.page-wrapper .introduce-container { position: static !important; width: 100%; height: 100%; display: flex; flex-direction: column; }
+.page-wrapper .introduce-box { position: static !important; height: 100% !important; min-height: 100% !important; width: 360px !important; transition: width 0.2s; flex-shrink: 0; }
+.page-wrapper .introduce-box.introduce-hidden { width: 0 !important; min-width: 0 !important; overflow: hidden; border: none; padding: 0; margin: 0; }
+.side-guide-wrapper { position: fixed; top: 0; right: 0; height: 100vh; z-index: 200; pointer-events: none; }
+.side-guide-wrapper .introduce-container { pointer-events: auto; }
+
+@media (max-width: 1300px) {
+    .page-wrapper { flex-direction: column; }
+    .introduce-wrapper { width: 100%; }
+    .page-wrapper .introduce-box { width: 100% !important; max-width: 360px; align-self: flex-end; }
+}

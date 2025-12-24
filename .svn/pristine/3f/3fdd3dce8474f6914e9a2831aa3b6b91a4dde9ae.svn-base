@@ -1,0 +1,321 @@
+.content {
+  flex: 1;
+  min-height: calc(100vh - var(--header-height));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.chess-content {
+  width: 1060px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  box-shadow:  0px 12px 48px 0px rgba(13, 13, 13, 0.14);
+  background: #FFFFFF;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+
+.chess-score-box {
+  width: 32%;
+  padding: 24px 48px;
+}
+.chess-score {
+  width: 100%;
+  border-radius: 18px;
+  box-shadow:  0px 12px 48px 0px rgba(13, 13, 13, 0.14);
+  background: #FFFFFF;
+  padding-top: 24px;
+  position: relative;
+}
+.chess-score h5 {
+  width: 100%;
+  height: 24px;
+  font-size: 18px;
+  line-height: 24px;
+  color: #333;
+  text-align: center;
+  font-weight: 400;
+}
+.score-board {
+  width: 100%;
+  height: 244px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 18px;
+}
+.score-board .item {
+  font-size: 24px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 68% 68%;
+  cursor: pointer;
+}
+.score-board .item.disabled {
+  cursor: default;
+}
+.score-board .item:not(.disabled):hover {
+  border: 2px solid #4D39B6;
+} 
+.score-mask {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.3);
+  box-shadow: 0px 0px 4px #333;
+  z-index: 9;
+  top: 0;
+  left: 0;
+}
+.score {
+  width: 65.57%;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow:  0px 12px 48px 0px rgba(13, 13, 13, 0.14);
+  background: #FFFFFF;
+}
+.score h5 {
+  font-size: 14px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  color: #000;
+  font-weight: 400;
+}
+.score span {
+  width: 100%;
+  height: 46px;
+  display: block;
+  font-size: 16px;
+  text-align: center;
+  color: #333;
+  line-height: 44px;
+  border: 1px solid rgba(77, 57, 182, 0.2);
+  border-radius: 8px;
+  background: #F6F6FC;
+  cursor: pointer;
+  margin-top: 12px;
+}
+.score span:hover {
+  background-color: #e6e6f9;
+}
+
+.confirm-btn {
+  width: 100%;
+  height: 48px;
+  font-size: 18px;
+  color: #fff;
+  line-height: 48px;
+  text-align: center;
+  border-radius: 12px;
+  border: none;
+  background-color: #4D39B6;
+  cursor: pointer;
+}
+.confirm-btn[disabled] {
+  background-color: rgba(77, 57, 182, 0.5);
+  cursor: no-drop;
+}
+.confirm-btn:not([disabled]):hover {
+  box-shadow:  0px 8px 16px 0px rgba(77, 57, 182, 0.2);
+}
+
+
+
+.chess-board-box {
+  width: 68%;
+  padding: 24px;
+}
+
+.chess-top {
+  width: 100%;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.chess-top > h4 {
+  flex: 1;
+  font-size: 24px;
+  color: #333;
+  font-weight: 400;
+}
+.chess-top .tips {
+  width: min-content;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.chess-top .tips span {
+  width: max-content;
+  font-size: 18px;
+  line-height: 28px;
+  color: #757575;
+  margin-right: 8px;
+}
+.chess-top .tips i {
+  width: 28px;
+  height: 28px;
+  display: block;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: #fff;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 16px auto;
+}
+.chess-top .tips i.x {
+  background-image: url(./../images/x-icon.png);
+}
+.chess-top .tips i.o {
+  background-image: url(./../images/o-icon.png);
+}
+
+.chess-board-info {
+  width: 100%;
+  height: 672px;
+  padding: 24px;
+  background-color: #f6f6f6;
+  border-radius: 18px;
+}
+
+
+.bottom {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 48px;
+}
+.start-btn {
+  width: 352px;
+  height: 74px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  color: #fff;
+  border-radius: 12px;
+  background: #4D39B6;
+  border: none;
+  cursor: pointer;
+}
+.start-btn[disabled] {
+  background-color: rgba(77, 57, 182, 0.5);
+  cursor: no-drop;
+}
+.start-btn:not([disabled]):hover {
+  box-shadow:  0px 8px 16px 0px rgba(77, 57, 182, 0.2);
+}
+
+
+@media screen and (max-width: 1920px) {
+  .chess-content {
+    width: 563px;
+  }
+
+  .chess-score-box {
+    width: 33.57%;
+    padding: 16px 36px;
+  }
+  .chess-score {
+    padding-top: 8px;
+    border-radius: 8px;
+  }
+  .chess-score h5 {
+    font-size: 13px;
+    height: 18px;
+    line-height: 18px;
+  }
+  .score-board {
+    height: 117px;
+    gap: 6px;
+    padding: 8px;
+    margin-bottom: 12px;
+  }
+  .score-board .item {
+    font-size: 14px;
+    border-radius: 4px;
+  }
+  .score {
+    padding: 8px;
+    border-radius: 6px;
+  }
+  .score h5 {
+    font-size: 12px;
+    height: 16px;
+    line-height: 16px;
+  }
+  .score span {
+    height: 26px;
+    font-size: 14px;
+    line-height: 26px;
+    border-radius: 6px;
+    margin-top: 6px;
+  }
+
+  .confirm-btn {
+    height: 32px;
+    font-size: 14px;
+    line-height: 36px;
+    border-radius: 8px;
+    margin-top: 4px;
+  }
+  
+
+  .chess-board-box {
+    width: 66.43%;
+    padding: 16px;
+  }
+
+  .chess-top {
+    height: 22px;
+    line-height: 22px;
+    margin-bottom: 16px;
+  }
+  .chess-top > h4 {
+    font-size: 16px;
+  }
+  .chess-top .tips span {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .chess-top .tips i {
+    width: 20px;
+    height: 20px;
+    background-size: 12px auto;
+  }
+
+  .chess-board-info {
+    height: 342px;
+  }
+
+  .bottom {
+    margin-top: 24px;
+  }
+
+  .start-btn {
+    width: 242px;
+    height: 44px;
+    font-size: 14px;
+  }
+}

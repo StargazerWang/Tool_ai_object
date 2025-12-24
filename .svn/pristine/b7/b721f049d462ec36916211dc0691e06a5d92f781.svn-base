@@ -1,0 +1,65 @@
+.header {
+  width: 100%;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: #fff;
+}
+
+:deep(.tool-name) {
+  width: auto; 
+  height: max-content;
+  display: block;
+  font-size: 18px;
+  color: #000;
+  text-align: center;
+  text-decoration: none;
+}
+
+.user-info {
+  width: min-content;
+  height: min-content;
+  cursor: pointer;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.login-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #000;
+  font-size: 16px;
+  text-align: center;
+  line-height: 36px;
+  cursor: pointer;
+}
+.login-btn:hover {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+@media screen and (max-width: 1920px) {
+  .header {
+    height: 36px;
+  }
+
+  :deep(.tool-name) {
+    font-size: 14px;
+  }
+
+  .avatar {
+    width: 24px;
+    height: 24px;
+  }
+
+  .login-btn {
+    font-size: 14px;
+  }
+}
